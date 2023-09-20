@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-plugin-init",
+  "name": "Init",
+  "description": "init demo",
+  "author": "fishyer",
+
+  "authorUrl": "https://fishyer.com",
+
+  "minAppVersion": "0.11.0",
+  "version": "0.0.1"
+}

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-plugin-init",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "init demo",
   "main": "lib/main.js",
   "license": "MIT",
@@ -9,8 +9,17 @@
     "dev": "obsidian-plugin dev src/main.ts"
   },
   "devDependencies": {
-    "typescript": "^4.1.5",
-    "obsidian-plugin-cli": "^0.4.3",
-    "obsidian": "obsidianmd/obsidian-api"
+    "obsidian": "obsidianmd/obsidian-api",
+    "playwright": "^1.38.0",
+    "playwright-chromium": "^1.38.0",
+    "turndown": "^7.1.2",
+    "typescript": "^4.1.5"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.4.4",
+    "@types/node": "^20.6.2",
+    "jsdom": "^22.1.0",
+    "punycode": "^2.3.0",
+    "winston": "^3.10.0"
   }
 }
