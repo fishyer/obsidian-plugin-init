@@ -9,7 +9,6 @@
     "dev": "obsidian-plugin dev src/main.ts"
   },
   "devDependencies": {
-    "obsidian": "obsidianmd/obsidian-api",
     "playwright": "^1.38.0",
     "playwright-chromium": "^1.38.0",
     "turndown": "^7.1.2",
@@ -18,8 +17,6 @@
   "dependencies": {
     "@mozilla/readability": "^0.4.4",
     "@types/node": "^20.6.2",
-    "jsdom": "^22.1.0",
-    "punycode": "^2.3.0",
     "winston": "^3.10.0"
   }
 }

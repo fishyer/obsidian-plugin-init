@@ -67,6 +67,7 @@ export default class Url2MdUtil {
     const page: Page = await browser.newPage();
     await page.goto(url);
     const html: string = await page.content();
+    browser.close();
     //使用Readability，提取html中的有用内容
     const doc = new DOMParser().parseFromString(html, "text/html");
     const reader: Readability = new Readability(doc);
