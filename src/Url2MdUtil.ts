@@ -14,6 +14,16 @@ const { info, warn, error, debug } = LogUtil;
 const { getCurDateTime } = TimeUtil;
 const turndownService: TurndownService = new TurndownService();
 
+turndownService.addRule('customImage', {
+    filter: (node) => {
+        return node.nodeName === 'IMG' && (node.hasAttribute('src') || node.hasAttribute('data-src') || node.hasAttribute('data-original'));
+    },
+    replacement: (content, node) => {
+        const src = node.getAttribute('data-original') || node.getAttribute('data-src') || node.getAttribute('src');
+        return `![](${src})\n`;
+    },
+});
+
 function addMetadata(
   title: string,
   url: string,
@@ -28,8 +38,15 @@ function addMetadata(
   return markdownWithMetadata;
 }
 
+// 从文件路径中提取文件名 不包含扩展名
+// 示例： MyLogseq/topic/note-course/技术书籍-学习笔记/深入理解Android自动化测试.md --> 深入理解Android自动化测试
+function extractFileName(filename) {
+  var fileNameWithoutExtension = filename.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
+  return fileNameWithoutExtension;
+}
+
 export function getSavePath(title: string, outputDir: string) {
-  const fileName = normalizePath(title) + ".md";
+  const fileName = normalizePath(extractFileName(title)) + ".md";
   const savePath = outputDir + "/" + fileName;
   return savePath;
 }
@@ -53,7 +70,8 @@ export default class Url2MdUtil {
     adapter: DataAdapter
   ): Promise<void> {
     const url = link.url;
-    const article = await Url2MdUtil.url2html(url);
+    const html = await Url2MdUtil.url2html(url);
+    const article = Url2MdUtil.cleanHtml(html);
     //如果article为空，则抛出异常，以便跳过该任务
     if (!article) {
       throw new Error(`无法解析文章内容: 任务${index} 链接 ${link.toString()}`);
@@ -74,24 +92,30 @@ export default class Url2MdUtil {
     info(`MarkDown文件保存成功: ${filePath}`);
   }
 
-  // 使用Turndown库，将html转换为markdown
-  public static html2md(html) {
-    const markdown: string = turndownService.turndown(html);
-    return markdown;
-  }
-
   public static async url2html(url: string) {
     browserContext = await getBrowserContext();
     const page: Page = await browserContext.newPage();
     await page.goto(url);
     const html: string = await page.content();
     page.close();
+    return html;
+  }
+
+  public static cleanHtml(html) {
     //使用Readability，提取html中的有用内容
     const doc = new DOMParser().parseFromString(html, "text/html");
     const reader: Readability = new Readability(doc);
     const article = reader.parse();
     return article;
   }
+
+  // 使用Turndown库，将html转换为markdown
+  public static html2md(html) {
+    const markdown: string = turndownService.turndown(html);
+    return markdown;
+  }
+
+
 }
 
 // 创建互斥锁实例

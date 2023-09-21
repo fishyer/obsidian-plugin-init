@@ -21,7 +21,7 @@ import { type } from "os";
 import Url2MdUtil from "./Url2MdUtil";
 import TestClient from "./test";
 // import Url2MdUtil from "./Url2MdUtil";
-// import {startServer,stopServer} from "./KoaApp";
+import {startServer,stopServer} from "./KoaApp";
 
 /*
 debug: 测试时使用、循环中用
@@ -36,34 +36,43 @@ const watch = TimeUtil.getElapsedTime;
 
 LogUtil.info("开始执行:main.ts");
 
-
 interface InitSettings {
   mySetting: string;
+  verson: string;
+  lastRuntime: string;
+  timeStat:{}
 }
 
-const DEFAULT_SETTINGS: InitSettings = {
+const DEFAULT_SETTINGS = {
   mySetting: "",
+  verson: '',
+  lastRuntime: '',
+  timeStat:{}
 };
 
 var pluginApp:App;
+
+
 
 export function getPluginApp() {
   return pluginApp;
 }
 
-export default class Init extends Plugin {
-  settings: InitSettings;
+export default class InitPlugin extends Plugin {
+  settings:InitSettings;
   async onload() {
+    await this.loadSettings()
     pluginApp = this.app;
     const verson = 11;
     console.log("loading plugin,verson=" + verson);
+    // this.saveData({ verson: verson });
+    // this.saveData({ lastRuntime: TimeUtil.getCurDateTime() });
     const testClient = new TestClient(this.app);
     await this.app.vault.adapter.mkdir("test");
-    await testClient.testUrl2md(this)
+    // await testClient.testUrl2md(this)
     info("准备启动Koa服务");
-    // startServer();
-    // info("Koa服务启动完成，继续其它操作");
-    await this.loadSettings();
+    startServer();
+    info("Koa服务启动完成，继续其它操作");
     // 在侧边栏添加一个图标
     this.addRibbonIcon("dice", "Init", () => {
       new Notice("This is a notice!");
@@ -166,11 +175,14 @@ export default class Init extends Plugin {
     this.addSettingTab(new SampleSettingTab(this.app, this));
   }
   onunload() {
-    console.log("unloading plugin");
     pluginApp=null;
+    this.saveSettings().then(() => {
+      console.log("settings saved");
+    });
+    console.log("unloading plugin");
     info("准备停止Koa服务");
-    // stopServer();
-    // info("Koa服务停止完成，继续其它操作");
+    stopServer();
+    info("Koa服务停止完成，继续其它操作");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -201,8 +213,8 @@ class SampleModal extends Modal {
 
 // 设置项
 class SampleSettingTab extends PluginSettingTab {
-  plugin: Init;
-  constructor(app: App, plugin: Init) {
+  plugin: InitPlugin;
+  constructor(app: App, plugin: InitPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -225,3 +237,4 @@ class SampleSettingTab extends PluginSettingTab {
       );
   }
 }
+
