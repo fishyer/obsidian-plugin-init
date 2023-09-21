@@ -21,6 +21,7 @@ import { type } from "os";
 import Url2MdUtil from "./Url2MdUtil";
 import TestClient from "./test";
 // import Url2MdUtil from "./Url2MdUtil";
+// import {startServer,stopServer} from "./KoaApp";
 
 /*
 debug: 测试时使用、循环中用
@@ -31,6 +32,7 @@ error: 错误
 const { info, warn, error, debug } = LogUtil;
 const { printLinksInfo } = MdLinkUtil;
 const watch = TimeUtil.getElapsedTime;
+
 
 LogUtil.info("开始执行:main.ts");
 
@@ -43,14 +45,24 @@ const DEFAULT_SETTINGS: InitSettings = {
   mySetting: "",
 };
 
+var pluginApp:App;
+
+export function getPluginApp() {
+  return pluginApp;
+}
+
 export default class Init extends Plugin {
   settings: InitSettings;
   async onload() {
+    pluginApp = this.app;
     const verson = 11;
     console.log("loading plugin,verson=" + verson);
     const testClient = new TestClient(this.app);
     await this.app.vault.adapter.mkdir("test");
     await testClient.testUrl2md(this)
+    info("准备启动Koa服务");
+    // startServer();
+    // info("Koa服务启动完成，继续其它操作");
     await this.loadSettings();
     // 在侧边栏添加一个图标
     this.addRibbonIcon("dice", "Init", () => {
@@ -155,6 +167,10 @@ export default class Init extends Plugin {
   }
   onunload() {
     console.log("unloading plugin");
+    pluginApp=null;
+    info("准备停止Koa服务");
+    // stopServer();
+    // info("Koa服务停止完成，继续其它操作");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
