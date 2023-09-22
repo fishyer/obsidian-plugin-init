@@ -1,94 +1,74 @@
-import {
-  App,
-  DataAdapter,
-  Modal,
-  Notice,
-  Plugin,
-  PluginSettingTab,
-  Setting,
-  TFile,
-  normalizePath,
-} from "obsidian";
+import { Notice, Plugin, TFile } from "obsidian";
+import SampleModal from "./component/SampleModal";
+import SampleSettingTab from "./component/SampleSettingTab";
+import * as ChromeUtil from "./util/ChromeUtil";
+import * as FileUtil from "./util/FileUtil";
+import * as LogUtil from "./util/LogUtil";
+import * as MdLinkUtil from "./util/MdLinkUtil";
+import * as TimeUtil from "./util/TimeUtil";
+import * as Url2MdUtil from "./util/Url2MdUtil";
+import KeyValueHelper from "./helper/KeyValueHelper";
+import { startServer, stopServer } from "./server/KoaApp";
+import * as TestClient from "./test";
 
-import ChromeUtil from "./ChromeUtil";
-import FileUtil from "./FileUtil";
-// import InoreaderUtil from "./InoreaderUtil";
-import KeyValueUtil from "./KeyValueUtil";
-import LogUtil from "./LogUtil";
-import { MdLink, MdLinkUtil } from "./MdLinkUtil";
-import TimeUtil from "./TimeUtil";
-import { type } from "os";
-import Url2MdUtil from "./Url2MdUtil";
-import TestClient from "./test";
-// import Url2MdUtil from "./Url2MdUtil";
-import {startServer,stopServer} from "./KoaApp";
-
-/*
-debug: 测试时使用、循环中用
-info: 正常输出
-warn: 警告
-error: 错误
-*/
 const { info, warn, error, debug } = LogUtil;
-const { printLinksInfo } = MdLinkUtil;
-const watch = TimeUtil.getElapsedTime;
+const { printLinksInfo, MdLink } = MdLinkUtil;
 
-
-LogUtil.info("开始执行:main.ts");
-
-interface InitSettings {
-  mySetting: string;
-  verson: string;
+interface MarkSearchSettings {
+  archiveFolder: string;
+  scanFolder: string;
+  genFolder: string;
   lastRuntime: string;
-  timeStat:{}
+  timeStat: {};
+  taskLinks: [];
+  successLinks: [];
+  errorLinks: [];
 }
 
 const DEFAULT_SETTINGS = {
-  mySetting: "",
-  verson: '',
-  lastRuntime: '',
-  timeStat:{}
+  scanFolder: "scan",
+  genFolder: "gen",
+  archiveFolder: "archive",
+  timeStat: {},
+  taskStat: {},
 };
 
-var pluginApp:App;
+var curPlugin: MarkSearchPlugin;
 
-
-
-export function getPluginApp() {
-  return pluginApp;
+export function getCurPlugin() {
+  return curPlugin;
 }
 
-export default class InitPlugin extends Plugin {
-  settings:InitSettings;
+export function getPluginApp() {
+  return curPlugin.app;
+}
+
+export function getDataAdapter() {
+  return curPlugin.app.vault.adapter;
+}
+
+export function getSettings() {
+  return curPlugin.settings;
+}
+
+export default class MarkSearchPlugin extends Plugin {
+  settings: MarkSearchSettings;
   async onload() {
-    await this.loadSettings()
-    pluginApp = this.app;
-    const verson = 11;
-    console.log("loading plugin,verson=" + verson);
-    // this.saveData({ verson: verson });
-    // this.saveData({ lastRuntime: TimeUtil.getCurDateTime() });
-    const testClient = new TestClient(this.app);
-    await this.app.vault.adapter.mkdir("test");
-    // await testClient.testUrl2md(this)
-    info("准备启动Koa服务");
+    curPlugin = this;
+    super.onload();
+    console.log("onload MarkSearchPlugin");
+    await this.loadSettings();
     startServer();
-    info("Koa服务启动完成，继续其它操作");
-    // 在侧边栏添加一个图标
-    this.addRibbonIcon("dice", "Init", () => {
-      new Notice("This is a notice!");
-    });
-    //底部状态栏显示信息
-    this.addStatusBarItem().setText("Init-" + verson);
     // 添加测试对话窗的指令
     this.addCommand({
       id: "open-modal",
-      name: "测试对话窗",
+      name: "查看所有配置值",
       checkCallback: (checking: boolean) => {
         let leaf = this.app.workspace.activeLeaf;
         if (leaf) {
           if (!checking) {
-            var msg = this.settings.mySetting;
-            new SampleModal(this.app, msg).open();
+            var msg = this.settings;
+            new SampleModal(this.app, String(msg)).open();
           }
           return true;
         }
@@ -149,6 +129,7 @@ export default class InitPlugin extends Plugin {
         }
       },
     });
+
     // 添加移动文件的指令
     this.addCommand({
       id: "move-file",
@@ -156,7 +137,7 @@ export default class InitPlugin extends Plugin {
       callback: () => {
         const activeFile = this.app.workspace.getActiveFile();
         console.log("prepare move file......");
-        const targetFolder = this.settings.mySetting;
+        const targetFolder = this.settings.archiveFolder;
         if (activeFile && targetFolder) {
           const newPath = `${targetFolder}/${activeFile.name}`;
           this.app.vault.rename(activeFile, newPath);
@@ -165,76 +146,40 @@ export default class InitPlugin extends Plugin {
       },
     });
     this.addCommand({
-      id: "save-url",
-      name: "保存网页",
+      id: "start-scan",
+      name: "开始扫描",
       callback: async () => {
-        new Notice("准备保存网页");
+        new Notice("开始扫描，准备生成任务大纲md");
       },
     });
-
+    this.addCommand({
+      id: "start-gen",
+      name: "开始生成",
+      callback: async () => {
+        new Notice("开始生成，准备执行任务大纲md");
+      },
+    });
     this.addSettingTab(new SampleSettingTab(this.app, this));
+    //调用测试方法
+    // await this.app.vault.adapter.mkdir("test");
+    // await TestClient.testUrl2md();
   }
   onunload() {
-    pluginApp=null;
+    super.onunload();
+    console.log("onunload MarkSearchPlugin");
+    curPlugin = null;
     this.saveSettings().then(() => {
       console.log("settings saved");
     });
-    console.log("unloading plugin");
-    info("准备停止Koa服务");
     stopServer();
-    info("Koa服务停止完成，继续其它操作");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    await getDataAdapter().mkdir(this.settings.scanFolder);
+    await getDataAdapter().mkdir(this.settings.genFolder);
+    await getDataAdapter().mkdir(this.settings.archiveFolder);
   }
   async saveSettings() {
     await this.saveData(this.settings);
   }
 }
-
-// 对话窗
-class SampleModal extends Modal {
-  private msg: string;
-
-  constructor(app: App, msg: string) {
-    super(app);
-    this.msg = msg;
-  }
-
-  onOpen() {
-    let { contentEl } = this;
-    contentEl.setText(this.msg);
-  }
-  onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-// 设置项
-class SampleSettingTab extends PluginSettingTab {
-  plugin: InitPlugin;
-  constructor(app: App, plugin: InitPlugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-  display(): void {
-    let { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Init插件配置项" });
-    new Setting(containerEl)
-      .setName("归档文件夹路径")
-      .setDesc("可一键将笔记移动到此文件夹")
-      .addText((text) =>
-        text
-          .setPlaceholder("输入你的目标文件夹路径")
-          .setValue(this.plugin.settings.mySetting)
-          .onChange(async (value) => {
-            console.log("folder: " + value);
-            this.plugin.settings.mySetting = value;
-            await this.plugin.saveSettings();
-          })
-      );
-  }
-}
-

@@ -20,11 +20,15 @@
     "@types/koa__router": "^12.0.1",
     "@types/node": "^20.6.2",
     "async-mutex": "^0.4.0",
+    "highlight.js": "^11.8.0",
     "koa": "^2.14.2",
     "koa-bodyparser": "^4.4.1",
     "koa-cors": "^0.0.16",
     "koa-router": "^12.0.0",
+    "marked": "^9.0.3",
+    "marked-highlight": "^2.0.6",
     "obsidian": "^1.4.11",
+    "utils-decorators": "^2.0.6",
     "winston": "^3.10.0"
   }
 }

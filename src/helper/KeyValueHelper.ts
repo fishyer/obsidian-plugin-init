@@ -1,4 +1,4 @@
-import LogUtil from "./LogUtil";
+import * as LogUtil from "../util/LogUtil";
 const { info, warn, error, debug } = LogUtil;
 import { DataAdapter } from "obsidian";
 
@@ -6,7 +6,7 @@ interface KeyValue {
   [key: string]: any;
 }
 
-class KeyValueUtil {
+export default class KeyValueHelper {
   private filePath: string;
   private dataAdapter: DataAdapter;
   private data: KeyValue;
@@ -15,14 +15,22 @@ class KeyValueUtil {
     this.filePath = filePath;
     this.dataAdapter = dataAdaper;
     this.data = {};
-    // 如果文件存在，读取其中的数据
-    dataAdaper.exists(filePath).then((value) => {
-      if (value) {
-        dataAdaper.read(filePath).then((it) => {
-          this.data = JSON.parse(it);
-        });
-      }
-    });
+  }
+
+  public async loadDataFromFile(){
+    const isExists=await this.dataAdapter.exists(this.filePath);
+    if (!isExists) {
+      console.log("读取的文件不存在", this.filePath);
+      return;
+    }
+    const fileContent=await this.dataAdapter.read(this.filePath);
+    this.data = JSON.parse(fileContent);
+    console.log("读取文件成功", this.filePath);
+  }
+
+  public saveDataToFile(): void {
+    const dataToSave = JSON.stringify(this.data, null, 2);
+    this.dataAdapter.write(this.filePath, dataToSave).then();
   }
 
   // 添加key-value键值对
@@ -36,6 +44,10 @@ class KeyValueUtil {
     return this.data[key];
   }
 
+  public getData(): KeyValue {
+    return this.data;
+  }
+
   // 查找所有value为mValue的key
   public findKeysByValue(mValue: any): string[] {
     const keys: string[] = [];
@@ -46,11 +58,4 @@ class KeyValueUtil {
     }
     return keys;
   }
-
-  public saveDataToFile(): void {
-    const dataToSave = JSON.stringify(this.data, null, 2);
-    this.dataAdapter.write(this.filePath, dataToSave).then();
-  }
 }
-
-export default KeyValueUtil;
