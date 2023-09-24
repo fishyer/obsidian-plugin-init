@@ -3,7 +3,7 @@ import Koa from "koa";
 import bodyParser from "koa-bodyparser";
 import * as Router from "koa-router";
 import cors from "koa-cors";
-const path = require("path");
+import path from "path";
 
 import * as TimeUtil from "../util/TimeUtil";
 import * as Url2MdUtil from "../util/Url2MdUtil";
@@ -84,30 +84,32 @@ router.get("/time", async (ctx, next) => {
 //获取静态资源
 router.get("/resource", async (ctx, next) => {
   try {
-    const queryPath = ctx.query.path;
+    const imgPath = decodeURIComponent(ctx.query.imgPath);
+    console.log(`resource-imgPath: ${imgPath}`);
+    const mdPath = decodeURIComponent(ctx.query.mdPath);
+    console.log(`resource-mdPath: ${mdPath}`);
     //这是一个相对路径
-    const relativePath = decodeURIComponent(queryPath);
-    console.log(`resource-relativePath: ${relativePath}`);
-    // 创建一个md文件的绝对路径
-    const mdPath = MainPlugin.getSettings().genFolder+"/test.md";
+    console.log(`resource-relativePath: ${imgPath}`);
     // 根据mdPath和relativePath，获取绝对路径
-    const absolutePath = path.resolve(mdPath, relativePath);
+    const absolutePath = path.resolve(path.dirname(mdPath), imgPath);
     console.log(`resource-absolutePath: ${absolutePath}`);
     // 如果absolutePath的第一个字符是/，则去掉
     // const realPath = absolutePath.startsWith("/") ? absolutePath.substring(1) : absolutePath;
     // console.log(`resource-realPath: ${realPath}`);
     // 根据绝对路径读取文件内容
-    const arrayBufferData = await MainPlugin.getDataAdapter().readBinary(absolutePath); 
+    const arrayBufferData = await MainPlugin.getDataAdapter().readBinary(
+      absolutePath
+    );
     //必须使用Buffer.from()方法将ArrayBuffer转成Buffer，否则会报错
-    const bufferData = Buffer.from(arrayBufferData); 
+    const bufferData = Buffer.from(arrayBufferData);
     const fileSizeInKB = Math.ceil(bufferData.byteLength / 1024);
     console.log(`resource-size: ${fileSizeInKB}KB`);
-    ctx.body = bufferData; 
-    ctx.response.type = "image/jpeg"; 
+    ctx.body = bufferData;
+    ctx.response.type = "image/jpeg";
   } catch (err) {
     console.error(err);
     ctx.status = 500;
-    ctx.body = 'Internal Server Error';
+    ctx.body = "Internal Server Error";
   }
 });
 
@@ -123,7 +125,7 @@ router.post("/save", async (ctx, next) => {
       path: filePath,
     };
   } else {
-    console.log(`文件不存在 ${filePath} 标题: ${title}`);
+    console.log(`文件不存在 标题: ${title}`);
     filePath = await saveHtml(ctx, html, title, url);
   }
 });

@@ -11,6 +11,7 @@ import { Mutex } from "async-mutex";
 import * as MainPlugin from "../main";
 import axios from "axios";
 import path from "path";
+import md5 from "md5";
 
 // import deasync from "deasync";
 
@@ -96,13 +97,20 @@ export function initTurndownService() {
         if (
           urlname.endsWith(".jpg") ||
           urlname.endsWith(".png") ||
-          urlname.endsWith(".gif")
+          urlname.endsWith(".gif") ||
+          urlname.endsWith(".jpeg") ||
+          urlname.endsWith(".webp") ||
+          urlname.endsWith(".bmp") ||
+          urlname.endsWith(".ico") ||
+          urlname.endsWith(".svg") ||
+          urlname.endsWith(".tif")
         ) {
           filename = urlname;
         } else {
           filename = urlname + ".png";
         }
-        const imagePath = `${imageFolder}/${filename}`;
+        const newFileName = generateNewFileName(filename);
+        const imagePath = `${imageFolder}/${newFileName}`;
         console.log(`downloadImage url: ${url} imagePath: ${imagePath}`);
         downloadImage(src, imagePath);
         // localSrc是相对于md文件的相对路径
@@ -116,6 +124,26 @@ export function initTurndownService() {
       },
     });
   }
+}
+
+// 生成新的文件名函数
+function generateNewFileName(imageFileName) {
+  // 提取图片文件的扩展名
+  const fileExtension = path.extname(imageFileName);
+
+  // 获取当前时间戳
+  const timestamp = Date.now();
+
+  // 组合图片文件名和当前时间戳
+  let newFileName = `${imageFileName}_${timestamp}`;
+
+  //对newFileName进行md5编码
+  newFileName = normalizePath(md5(newFileName));
+
+  // 添加文件扩展名
+  newFileName += fileExtension;
+
+  return newFileName;
 }
 
 // 下载成功后，保存到指定文件夹，并返回本地图片链接
@@ -135,7 +163,7 @@ async function asyncDownloadImage(url, filePath) {
     console.log(`文件已存在，不再重复下载: ${url} ${filePath}`);
     return;
   }
-  const folder= path.dirname(filePath);
+  const folder = path.dirname(filePath);
   const isFolderExists = await MainPlugin.getDataAdapter().exists(folder);
   if (!isFolderExists) {
     console.log(`文件夹不存在，创建文件夹: ${folder}`);

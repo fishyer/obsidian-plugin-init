@@ -34,8 +34,8 @@ export async function markdownToHtml(filePath: string, repoName: string) {
     const bodyHtml = await marked.parse(newMarkdown);
     const replacedHtml = bodyHtml.replace(
       /src="(?!http)([^"]+)"/g,
-      (_, path) =>
-        `src="http://localhost:10086/resource?path=${encodeURIComponent(path)}"`
+      (_, imgPath) =>
+        `src="http://localhost:10086/resource?imgPath=${encodeURIComponent(imgPath)}&mdPath=${encodeURIComponent(filePath)}"`
     );
     const html = addStyle(title , replacedHtml);
     // 在genFolder下保存这三种html
