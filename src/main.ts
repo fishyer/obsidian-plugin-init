@@ -23,14 +23,20 @@ interface MarkSearchSettings {
   taskLinks: [];
   successLinks: [];
   errorLinks: [];
+  //是否需要下载网络图片到本地，为none时不下载，其它时下载到本地
+  imageFolder: string;
 }
 
 const DEFAULT_SETTINGS = {
+  archiveFolder: "archive",
   scanFolder: "scan",
   genFolder: "gen",
-  archiveFolder: "archive",
+  lastRuntime: "",
   timeStat: {},
-  taskStat: {},
+  taskLinks: [],
+  successLinks: [],
+  errorLinks: [],
+  imageFolder: "none",
 };
 
 var curPlugin: MarkSearchPlugin;
@@ -59,6 +65,7 @@ export default class MarkSearchPlugin extends Plugin {
     console.log("onload MarkSearchPlugin");
     await this.loadSettings();
     startServer();
+    Url2MdUtil.initTurndownService();
     // 添加测试对话窗的指令
     this.addCommand({
       id: "open-modal",
@@ -178,6 +185,9 @@ export default class MarkSearchPlugin extends Plugin {
     await getDataAdapter().mkdir(this.settings.scanFolder);
     await getDataAdapter().mkdir(this.settings.genFolder);
     await getDataAdapter().mkdir(this.settings.archiveFolder);
+    if (this.settings.imageFolder !== "none") {
+      await getDataAdapter().mkdir(this.settings.imageFolder);
+    }
   }
   async saveSettings() {
     await this.saveData(this.settings);

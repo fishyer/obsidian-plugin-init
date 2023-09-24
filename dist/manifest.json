@@ -1,11 +1,9 @@
 {
-  "id": "obsidian-plugin-init",
-  "name": "Init",
-  "description": "init demo",
+  "id": "MarkSearch",
+  "name": "【MarkSearch】",
+  "description": "随时随地收藏，打造你的本地搜索引擎",
   "author": "fishyer",
-
   "authorUrl": "https://fishyer.com",
-
   "minAppVersion": "0.11.0",
-  "version": "0.0.1"
+  "version": "1.0.0"
 }

@@ -3,35 +3,127 @@ import { MarkdownView, MarkdownPostProcessorContext } from "obsidian";
 import { measure } from "./DecoratorUtil";
 import { DataAdapter, normalizePath } from "obsidian";
 import { Readability } from "@mozilla/readability";
-import TurndownService from "turndown";
 import KeyValueUtil from "../helper/KeyValueHelper";
 import * as MdLinkUtil from "./MdLinkUtil";
 import * as TimeUtil from "./TimeUtil";
 import * as LogUtil from "./LogUtil";
 import { Mutex } from "async-mutex";
+import * as MainPlugin from "../main";
+import axios from "axios";
+// import deasync from "deasync";
 
 const { info, warn, error, debug } = LogUtil;
 const { MdLink } = MdLinkUtil;
 const { getCurDateTime } = TimeUtil;
-const turndownService: TurndownService = new TurndownService();
 
-turndownService.addRule("customImage", {
+import TurndownService from "turndown";
+const turndownService: TurndownService = new TurndownService({
+  headingStyle: "atx",
+  hr: "---",
+  bulletListMarker: "-",
+  codeBlockStyle: "fenced",
+  fence: "```",
+  emDelimiter: "*",
+  strongDelimiter: "**",
+  linkStyle: "referenced",
+});
+
+//不自定义的话，它会是角标形式的链接
+turndownService.addRule("customLink", {
   filter: (node) => {
-    return (
-      node.nodeName === "IMG" &&
-      (node.hasAttribute("src") ||
-        node.hasAttribute("data-src") ||
-        node.hasAttribute("data-original"))
-    );
+    return node.nodeName === "A" && node.hasAttribute("href");
   },
   replacement: (content, node) => {
-    const src =
-      node.getAttribute("data-original") ||
-      node.getAttribute("data-src") ||
-      node.getAttribute("src");
-    return `![](${src})\n`;
+    const href = node.getAttribute("href");
+    const title = node.title ? ` "${node.title}"` : "";
+    return `[${content}](${href}${title})`;
   },
 });
+
+export function initTurndownService() {
+  //看是否需要下载网络图片到本地
+  const imageFolder = MainPlugin.getSettings().imageFolder;
+  if (imageFolder === "none") {
+    console.log("不下载网络图片到本地");
+    //网络图片
+    turndownService.addRule("customImage", {
+      filter: (node) => {
+        return (
+          node.nodeName === "IMG" &&
+          (node.hasAttribute("src") ||
+            node.hasAttribute("data-src") ||
+            node.hasAttribute("data-original"))
+        );
+      },
+      replacement: (content, node) => {
+        const src =
+          node.getAttribute("data-original") ||
+          node.getAttribute("data-src") ||
+          node.getAttribute("src");
+        return `![](${src})\n`;
+      },
+    });
+  } else {
+    console.log("下载网络图片到本地");
+    //本地图片
+    turndownService.addRule("customImage", {
+      filter: (node) => {
+        return (
+          node.nodeName === "IMG" &&
+          (node.hasAttribute("src") ||
+            node.hasAttribute("data-src") ||
+            node.hasAttribute("data-original"))
+        );
+      },
+      replacement: (content, node) => {
+        const src =
+          node.getAttribute("data-original") ||
+          node.getAttribute("data-src") ||
+          node.getAttribute("src");
+        // 在这里将网络图片下载到本地指定文件夹，并获取本地图片链接
+        const imageFolder = MainPlugin.getSettings().imageFolder;
+        const localSrc = downloadImage(src, imageFolder);
+        return `![](${localSrc})\n`;
+      },
+    });
+  }
+}
+
+// 下载成功后，保存到指定文件夹，并返回本地图片链接
+function downloadImage(url, folder) {
+  const urlname =normalizePath(url.substring(url.lastIndexOf("/") + 1));
+  var filename = "";
+  if (urlname.endsWith(".jpg") || urlname.endsWith(".png")) {
+    filename=urlname;
+  }else{
+    filename=urlname+".png";
+  }
+  console.log(`downloadImage url: ${url} filename: ${filename}`);
+  axios({
+    url,
+    responseType: "arraybuffer", // 指定响应类型为arraybuffer
+    method: "GET",
+  })
+    .then((response) => {
+      const data = response.data;
+      const genFolder = MainPlugin.getSettings().genFolder;
+      const realFolder = `${genFolder}/history/${folder}`;
+      MainPlugin.getDataAdapter().mkdir(realFolder);
+      // 这是相对于vault的路径
+      const realPath = `${realFolder}/${filename}`;
+      MainPlugin.getDataAdapter()
+        .writeBinary(realPath, data)
+        .then(() => {
+          console.log(`下载图片成功: ${realPath}`);
+        });
+    })
+    .catch((error) => {
+      console.log(`下载图片时发生错误: ${error.message}`);
+    });
+  //这里返回的是相对于md文件的相对路径
+  const filePath = `${folder}/${filename}`;
+  return filePath;
+}
 
 export function addMetadata(
   title: string,
@@ -39,9 +131,9 @@ export function addMetadata(
   clipTime: string,
   markdown: string
 ) {
-  const titleLine = `title:: ${title}`;
-  const urlLine = `url:: ${url}`;
-  const ctimeLine = `clipTime:: ${clipTime}`;
+  const titleLine = `title: ${title}`;
+  const urlLine = `url: ${url}`;
+  const ctimeLine = `clipTime: ${clipTime}`;
   const metadata = ["---", titleLine, urlLine, ctimeLine, "---"].join("\n");
   const markdownWithMetadata = metadata + "\n\n" + markdown;
   return markdownWithMetadata;

@@ -50,5 +50,18 @@ export default class SampleSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+    new Setting(containerEl)
+      .setName("图片文件夹路径")
+      .setDesc("不为none则将下载网络图片到本地")
+      .addText((text) =>
+        text
+          .setPlaceholder("输入你的目标文件夹路径")
+          .setValue(this.plugin.settings.imageFolder)
+          .onChange(async (value) => {
+            console.log("image folder: " + value);
+            this.plugin.settings.imageFolder = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }

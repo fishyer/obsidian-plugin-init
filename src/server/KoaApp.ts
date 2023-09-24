@@ -56,27 +56,14 @@ router.get("/hello/:name", async (ctx, next) => {
 
 router.get("/render", async (ctx, next) => {
   const targetUrl = ctx.query.targetUrl;
+  const repoName = ctx.query.repoName;
   console.log(`targetUrl: ${targetUrl}`);
+  console.log(`repoName: ${repoName}`);
   // 对targetUrl参数进行URL解码
-  const decodedUrl = decodeURIComponent(targetUrl);
-  console.log(`decodedUrl: ${decodedUrl}`);
-  ctx.response.body = `<!DOCTYPE html>
-  <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8">
-    <title>我的动态网页-${targetUrl}</title>
-  </head>
-  <body>
-    <h1>欢迎来到我的网页-${decodedUrl}！</h1>
-    <p>这是一个简单的 HTML 页面示例。</p>
-    <img src="https://picsum.photos/400/200" alt="图片描述">
-    <ul>
-      <li>列表项 1</li>
-      <li>列表项 2</li>
-      <li>列表项 3</li>
-    </ul>
-  </body>
-  </html>`;
+  const filePath = decodeURIComponent(targetUrl);
+  console.log(`filePath: ${filePath}`);
+  // 将markdown转换为html
+  ctx.response.body = await MarkdownRenderUtil.markdownToHtml(filePath,repoName);
 });
 
 router.get("/time", async (ctx, next) => {
@@ -105,17 +92,6 @@ router.post("/save", async (ctx, next) => {
   }
 });
 
-router.get("/test", async (ctx, next) => {
-  const path = "MyLogseq/zhihu/脚本-通过TG机器人转发消息到五彩笔记.md";
-  console.log(`test path: ${path}`);
-  const title=Url2MdUtil.extractFileName(path);
-  const markdown = await MainPlugin.getDataAdapter().read(path);
-  console.log(`markdown: ${markdown}`);
-  const html = await MarkdownRenderUtil.markdownToHtml(markdown);
-  console.log(`html: ${html}`);
-  ctx.response.body = MarkdownRenderUtil.addStyle(title,html);
-});
-
 router.post("/mark", async (ctx, next) => {
   const { title, url, bookmarkId } = ctx.request.body;
   console.log(`/mark title: ${title} url: ${url} bookmarkId:${bookmarkId}`);
@@ -136,13 +112,6 @@ router.post("/mark", async (ctx, next) => {
   } else {
     console.log(`文件不存在 ${filePath}`);
   }
-  // const article= Url2MdUtil.cleanHtml(html);
-  // const markdown = Url2MdUtil.html2md(article.content);
-  // const realTitle = Url2MdUtil.getArticleTitle(url, article.title, title);
-  // const folderPath=MainPlugin.getSettings().genFolder+"/history";
-  // const filePath = Url2MdUtil.getSavePath(realTitle, folderPath);
-  // await MainPlugin.getDataAdapter().mkdir(folderPath)
-  // await MainPlugin.getDataAdapter().write(filePath, markdown);
 
   ctx.body = {
     message: "File marked successfully",

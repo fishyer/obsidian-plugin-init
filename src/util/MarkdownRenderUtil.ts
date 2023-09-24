@@ -2,6 +2,9 @@ import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 
+import * as MainPlugin from "../main";
+import * as Url2MdUtil from "./Url2MdUtil";
+
 const marked = new Marked(
   markedHighlight({
     langPrefix: "hljs language-",
@@ -12,12 +15,76 @@ const marked = new Marked(
   })
 );
 
-// 创建一个将Markdown字符串转换为HTML字符串的函数
-export function markdownToHtml(markdownString: string) {
-  return marked.parse(markdownString);
+// 读取本地md文件，并将Markdown字符串转换为HTML
+export async function markdownToHtml(filePath: string, repoName: string) {
+  // 读取文件内容
+  const fileContent = await MainPlugin.getDataAdapter().read(filePath);
+  const frontmatterValues = getFrontmatterValues(fileContent);
+  if (frontmatterValues) {
+    // const regex = /---([^]+?)---/g;
+    const regExp = /^---([\s\S]*?)---\n/;
+    const replacedText = fileContent.replace(regExp, "");
+    const title = getTitle(frontmatterValues.title, filePath);
+    const newMarkdown =
+      `# 🏆︎${title}\n` +
+      `[📁本地路径](${getObsidianUrl(filePath, repoName)})\n\n` +
+      `[🌐原文链接](${frontmatterValues.url})\n\n` +
+      `剪藏时间: ${frontmatterValues.clipTime}\n\n` +
+      replacedText;
+    const bodyHtml = await marked.parse(newMarkdown);
+    const html = addStyle(title+"2", bodyHtml);
+    return html;
+  }
+  console.log(`没有元数据: ${filePath}`);
+  const title = Url2MdUtil.extractFileName(filePath);
+  console.log(`title: ${title}`);
+  const newMarkdown =
+    `# 🏆︎${title}\n` +
+    `[📁本地路径](${getObsidianUrl(filePath, repoName)})\n` +
+    fileContent;
+  const bodyHtml = await marked.parse(newMarkdown);
+  const html = addStyle(title+"1", bodyHtml);
+  return html;
+}
+
+export function getTitle(frontTitle: string, filePath: string) {
+  if (frontTitle) {
+    console.log(`frontTitle: ${frontTitle}`);
+    return frontTitle;
+  }
+  const fileTitle = Url2MdUtil.extractFileName(filePath);
+  console.log(`fileTitle: ${fileTitle}`);
+  return fileTitle;
+}
+
+//生成Obsidian链接 obsidian://open?vault=TestOb&file=%E6%9C%AA%E5%91%BD%E5%90%8D-9
+export function getObsidianUrl(path, repoName) {
+  const vault = encodeURIComponent(repoName.trim());
+  const name = encodeURIComponent(path.replace(".md", ""));
+  const url = `obsidian://open?vault=${vault}&file=${name}`;
+  return url;
+}
+
+export function getFrontmatterValues(markdownString: string) {
+  const regExp = /^---([\s\S]*?)---\n/;
+  const match = regExp.exec(markdownString);
+  if (match && match.length > 1) {
+    const frontmatter = match[1];
+    const frontmatterValues = frontmatter
+      .split("\n")
+      .reduce((values: any, line: string) => {
+        const [key, value] = line.split(/:(.+)/).map((str) => str.trim());
+        values[key] = value;
+        return values;
+      }, {});
+    console.log("frontmatterValues: ", JSON.stringify(frontmatterValues));
+    return frontmatterValues;
+  }
+  return null;
 }
 
 export function addStyle(title: string, body: string): string {
+  console.log(`addStyle title: ${title}`);
   // 自定义 CSS 样式
   const customStyles = `
   body {

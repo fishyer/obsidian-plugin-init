@@ -29,8 +29,14 @@ export default class KeyValueHelper {
   }
 
   public saveDataToFile(): void {
-    const dataToSave = JSON.stringify(this.data, null, 2);
-    this.dataAdapter.write(this.filePath, dataToSave).then();
+    this.dataAdapter.exists(this.filePath).then((isExists) => {
+      if (!isExists) {
+        console.log("保存的文件不存在", this.filePath);
+        return;
+      }
+      const dataToSave = JSON.stringify(this.data, null, 2);
+      this.dataAdapter.write(this.filePath, dataToSave).then();
+    });
   }
 
   // 添加key-value键值对
