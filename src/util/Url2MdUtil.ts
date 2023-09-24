@@ -10,6 +10,8 @@ import * as LogUtil from "./LogUtil";
 import { Mutex } from "async-mutex";
 import * as MainPlugin from "../main";
 import axios from "axios";
+import path from "path";
+
 // import deasync from "deasync";
 
 const { info, warn, error, debug } = LogUtil;
@@ -17,30 +19,32 @@ const { MdLink } = MdLinkUtil;
 const { getCurDateTime } = TimeUtil;
 
 import TurndownService from "turndown";
-const turndownService: TurndownService = new TurndownService({
-  headingStyle: "atx",
-  hr: "---",
-  bulletListMarker: "-",
-  codeBlockStyle: "fenced",
-  fence: "```",
-  emDelimiter: "*",
-  strongDelimiter: "**",
-  linkStyle: "referenced",
-});
 
-//不自定义的话，它会是角标形式的链接
-turndownService.addRule("customLink", {
-  filter: (node) => {
-    return node.nodeName === "A" && node.hasAttribute("href");
-  },
-  replacement: (content, node) => {
-    const href = node.getAttribute("href");
-    const title = node.title ? ` "${node.title}"` : "";
-    return `[${content}](${href}${title})`;
-  },
-});
+var turndownService: TurndownService;
 
 export function initTurndownService() {
+  turndownService = new TurndownService({
+    headingStyle: "atx",
+    hr: "---",
+    bulletListMarker: "-",
+    codeBlockStyle: "fenced",
+    fence: "```",
+    emDelimiter: "*",
+    strongDelimiter: "**",
+    linkStyle: "referenced",
+  });
+
+  //不自定义的话，它会是角标形式的链接
+  turndownService.addRule("customLink", {
+    filter: (node) => {
+      return node.nodeName === "A" && node.hasAttribute("href");
+    },
+    replacement: (content, node) => {
+      const href = node.getAttribute("href");
+      const title = node.title ? ` "${node.title}"` : "";
+      return `[${content}](${href}${title})`;
+    },
+  });
   //看是否需要下载网络图片到本地
   const imageFolder = MainPlugin.getSettings().imageFolder;
   if (imageFolder === "none") {
@@ -81,48 +85,72 @@ export function initTurndownService() {
           node.getAttribute("data-src") ||
           node.getAttribute("src");
         // 在这里将网络图片下载到本地指定文件夹，并获取本地图片链接
+        // imageFolder是相对于vault的路径
         const imageFolder = MainPlugin.getSettings().imageFolder;
-        const localSrc = downloadImage(src, imageFolder);
-        return `![](${localSrc})\n`;
+        MainPlugin.getDataAdapter()
+          .mkdir(imageFolder)
+          .then(() => {});
+        const url = src;
+        const urlname = normalizePath(url.substring(url.lastIndexOf("/") + 1));
+        var filename = "";
+        if (
+          urlname.endsWith(".jpg") ||
+          urlname.endsWith(".png") ||
+          urlname.endsWith(".gif")
+        ) {
+          filename = urlname;
+        } else {
+          filename = urlname + ".png";
+        }
+        const imagePath = `${imageFolder}/${filename}`;
+        console.log(`downloadImage url: ${url} imagePath: ${imagePath}`);
+        downloadImage(src, imagePath);
+        // localSrc是相对于md文件的相对路径
+        const mdPath = MainPlugin.getSettings().genFolder + "/test.md";
+        const relativePath = path.relative(mdPath, imagePath);
+        console.log(`relativePath: ${relativePath}`);
+        // 根据mdPath和relativePath，获取绝对路径
+        const absolutePath = path.resolve(mdPath, relativePath);
+        console.log(`absolutePath: ${absolutePath}`);
+        return `![](${relativePath})\n`;
       },
     });
   }
 }
 
 // 下载成功后，保存到指定文件夹，并返回本地图片链接
-function downloadImage(url, folder) {
-  const urlname =normalizePath(url.substring(url.lastIndexOf("/") + 1));
-  var filename = "";
-  if (urlname.endsWith(".jpg") || urlname.endsWith(".png")) {
-    filename=urlname;
-  }else{
-    filename=urlname+".png";
-  }
-  console.log(`downloadImage url: ${url} filename: ${filename}`);
-  axios({
-    url,
-    responseType: "arraybuffer", // 指定响应类型为arraybuffer
-    method: "GET",
-  })
-    .then((response) => {
-      const data = response.data;
-      const genFolder = MainPlugin.getSettings().genFolder;
-      const realFolder = `${genFolder}/history/${folder}`;
-      MainPlugin.getDataAdapter().mkdir(realFolder);
-      // 这是相对于vault的路径
-      const realPath = `${realFolder}/${filename}`;
-      MainPlugin.getDataAdapter()
-        .writeBinary(realPath, data)
-        .then(() => {
-          console.log(`下载图片成功: ${realPath}`);
-        });
+function downloadImage(url, filePath) {
+  asyncDownloadImage(url, filePath)
+    .then(() => {
+      console.log(`下载图片成功: ${url} ${filePath}`);
     })
-    .catch((error) => {
-      console.log(`下载图片时发生错误: ${error.message}`);
+    .catch((err) => {
+      console.error(err);
     });
-  //这里返回的是相对于md文件的相对路径
-  const filePath = `${folder}/${filename}`;
-  return filePath;
+}
+
+async function asyncDownloadImage(url, filePath) {
+  const isFileExists = await MainPlugin.getDataAdapter().exists(filePath);
+  if (isFileExists) {
+    console.log(`文件已存在，不再重复下载: ${url} ${filePath}`);
+    return;
+  }
+  const folder= path.dirname(filePath);
+  const isFolderExists = await MainPlugin.getDataAdapter().exists(folder);
+  if (!isFolderExists) {
+    console.log(`文件夹不存在，创建文件夹: ${folder}`);
+    await MainPlugin.getDataAdapter().mkdir(folder);
+  }
+  console.log(`开始下载图片: ${url} ${filePath}`);
+  // 使用axios下载图片
+  const response = await axios({
+    url,
+    responseType: "arraybuffer",
+    method: "GET",
+  });
+  const data = response.data;
+  // 使用writeBinary方法写入二进制数据
+  await MainPlugin.getDataAdapter().writeBinary(filePath, data);
 }
 
 export function addMetadata(

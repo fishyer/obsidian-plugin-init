@@ -1,7 +1,9 @@
 import Koa from "koa";
+// import koaStatic from 'koa-static';
 import bodyParser from "koa-bodyparser";
 import * as Router from "koa-router";
 import cors from "koa-cors";
+const path = require("path");
 
 import * as TimeUtil from "../util/TimeUtil";
 import * as Url2MdUtil from "../util/Url2MdUtil";
@@ -10,6 +12,7 @@ import * as MainPlugin from "../main";
 import * as MarkdownRenderUtil from "../util/MarkdownRenderUtil";
 
 const koaApp = new Koa();
+// koaApp.use(koaStatic('static'));
 const router = new Router.default();
 
 koaApp.use(
@@ -63,7 +66,10 @@ router.get("/render", async (ctx, next) => {
   const filePath = decodeURIComponent(targetUrl);
   console.log(`filePath: ${filePath}`);
   // 将markdown转换为html
-  ctx.response.body = await MarkdownRenderUtil.markdownToHtml(filePath,repoName);
+  ctx.response.body = await MarkdownRenderUtil.markdownToHtml(
+    filePath,
+    repoName
+  );
 });
 
 router.get("/time", async (ctx, next) => {
@@ -73,6 +79,36 @@ router.get("/time", async (ctx, next) => {
     count: count,
   };
   ctx.body = response;
+});
+
+//获取静态资源
+router.get("/resource", async (ctx, next) => {
+  try {
+    const queryPath = ctx.query.path;
+    //这是一个相对路径
+    const relativePath = decodeURIComponent(queryPath);
+    console.log(`resource-relativePath: ${relativePath}`);
+    // 创建一个md文件的绝对路径
+    const mdPath = MainPlugin.getSettings().genFolder+"/test.md";
+    // 根据mdPath和relativePath，获取绝对路径
+    const absolutePath = path.resolve(mdPath, relativePath);
+    console.log(`resource-absolutePath: ${absolutePath}`);
+    // 如果absolutePath的第一个字符是/，则去掉
+    // const realPath = absolutePath.startsWith("/") ? absolutePath.substring(1) : absolutePath;
+    // console.log(`resource-realPath: ${realPath}`);
+    // 根据绝对路径读取文件内容
+    const arrayBufferData = await MainPlugin.getDataAdapter().readBinary(absolutePath); 
+    //必须使用Buffer.from()方法将ArrayBuffer转成Buffer，否则会报错
+    const bufferData = Buffer.from(arrayBufferData); 
+    const fileSizeInKB = Math.ceil(bufferData.byteLength / 1024);
+    console.log(`resource-size: ${fileSizeInKB}KB`);
+    ctx.body = bufferData; 
+    ctx.response.type = "image/jpeg"; 
+  } catch (err) {
+    console.error(err);
+    ctx.status = 500;
+    ctx.body = 'Internal Server Error';
+  }
 });
 
 router.post("/save", async (ctx, next) => {

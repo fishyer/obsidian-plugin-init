@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import MarkSearchPlugin from "../main";
+import { initTurndownService } from "../util/Url2MdUtil";
 // 设置项
 export default class SampleSettingTab extends PluginSettingTab {
   plugin: MarkSearchPlugin;
@@ -61,6 +62,8 @@ export default class SampleSettingTab extends PluginSettingTab {
             console.log("image folder: " + value);
             this.plugin.settings.imageFolder = value;
             await this.plugin.saveSettings();
+            // 重新初始化turndownService
+            initTurndownService();
           })
       );
   }

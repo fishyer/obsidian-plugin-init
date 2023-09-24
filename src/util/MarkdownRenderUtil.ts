@@ -29,10 +29,19 @@ export async function markdownToHtml(filePath: string, repoName: string) {
       `# 🏆︎${title}\n` +
       `[📁本地路径](${getObsidianUrl(filePath, repoName)})\n\n` +
       `[🌐原文链接](${frontmatterValues.url})\n\n` +
-      `剪藏时间: ${frontmatterValues.clipTime}\n\n` +
+      `🗓剪藏时间: ${frontmatterValues.clipTime}\n\n` +
       replacedText;
     const bodyHtml = await marked.parse(newMarkdown);
-    const html = addStyle(title+"2", bodyHtml);
+    const replacedHtml = bodyHtml.replace(
+      /src="(?!http)([^"]+)"/g,
+      (_, path) =>
+        `src="http://localhost:10086/resource?path=${encodeURIComponent(path)}"`
+    );
+    const html = addStyle(title , replacedHtml);
+    // 在genFolder下保存这三种html
+    // MainPlugin.getDataAdapter().write("bodyHtml.html", bodyHtml);
+    // MainPlugin.getDataAdapter().write("replacedHtml.html", replacedHtml);
+    // MainPlugin.getDataAdapter().write("html.html", html);
     return html;
   }
   console.log(`没有元数据: ${filePath}`);
@@ -43,7 +52,12 @@ export async function markdownToHtml(filePath: string, repoName: string) {
     `[📁本地路径](${getObsidianUrl(filePath, repoName)})\n` +
     fileContent;
   const bodyHtml = await marked.parse(newMarkdown);
-  const html = addStyle(title+"1", bodyHtml);
+  const replacedHtml = bodyHtml.replace(
+    /src="(?!http)([^"]+)"/g,
+    (_, path) =>
+      `src="http://localhost:10086/resource?path=${encodeURIComponent(path)}"`
+  );
+  const html = addStyle(title, replacedHtml);
   return html;
 }
 

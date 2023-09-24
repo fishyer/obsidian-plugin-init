@@ -27,6 +27,7 @@
     "koa-bodyparser": "^4.4.1",
     "koa-cors": "^0.0.16",
     "koa-router": "^12.0.0",
+    "koa-static": "^5.0.0",
     "marked": "^9.0.3",
     "marked-highlight": "^2.0.6",
     "obsidian": "^1.4.11",
