@@ -38,7 +38,7 @@ export async function markdownToHtml(filePath: string, repoName: string) {
         `src="http://localhost:10086/resource?imgPath=${encodeURIComponent(imgPath)}&mdPath=${encodeURIComponent(filePath)}"`
     );
     const html = addStyle(title , replacedHtml);
-    // 在genFolder下保存这三种html
+    // 在historyFolder下保存这三种html
     // MainPlugin.getDataAdapter().write("bodyHtml.html", bodyHtml);
     // MainPlugin.getDataAdapter().write("replacedHtml.html", replacedHtml);
     // MainPlugin.getDataAdapter().write("html.html", html);

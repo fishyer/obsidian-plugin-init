@@ -33,6 +33,7 @@
     "md5": "^2.3.0",
     "obsidian": "^1.4.11",
     "utils-decorators": "^2.0.6",
+    "uuid": "^9.0.1",
     "winston": "^3.10.0"
   }
 }

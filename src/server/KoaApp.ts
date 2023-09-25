@@ -25,8 +25,6 @@ koaApp.use(
   })
 );
 
-var taskCache: KeyValueHelper;
-
 let count = 0;
 
 koaApp.use(async (ctx, next) => {
@@ -127,40 +125,52 @@ router.post("/save", async (ctx, next) => {
   } else {
     console.log(`文件不存在 标题: ${title}`);
     filePath = await saveHtml(ctx, html, title, url);
+    ctx.body = {
+      message: "File new saved successfully",
+      path: filePath,
+    };
   }
 });
 
 router.post("/mark", async (ctx, next) => {
-  const { title, url, bookmarkId } = ctx.request.body;
-  console.log(`/mark title: ${title} url: ${url} bookmarkId:${bookmarkId}`);
-  // 通过缓存找到对应的文件，然后移动到指定的文件夹
-  const folderPath = MainPlugin.getSettings().genFolder + "/bookmark";
-  const taskCache = new KeyValueHelper(
-    `data/task-cache.json`,
-    MainPlugin.getDataAdapter()
-  );
-  const filePath = taskCache.getValueByKey(url);
-  console.log(`filePath: ${filePath}`);
+  const { title, url, html ,bookmarkId} = ctx.request.body;
+  console.log(`/mark title: ${title} url: ${url} html: ${html.length} bookmarkId:${bookmarkId}`);
+  var filePath = taskCache.getValueByKey(url);
+  console.log(`读取缓存 url: ${url} -> filePath: ${filePath}`);
   if (filePath) {
-    await MainPlugin.getDataAdapter().mkdir(folderPath);
-    const fileName = Url2MdUtil.extractFileName(filePath);
-    const newFilePath = folderPath + "/" + fileName + ".md";
-    await MainPlugin.getDataAdapter().rename(filePath, newFilePath);
-    console.log(`文件已移动到 ${newFilePath}`);
+    console.log(`文件已存在 ${filePath} 标题: ${title}`);
+    //移动文件到指定文件夹
+    const newFilePath=await moveFile(filePath);
+    ctx.body = {
+      message: "File has markd successfully",
+      path: newFilePath,
+    };
   } else {
-    console.log(`文件不存在 ${filePath}`);
+    console.log(`文件不存在 标题: ${title}`);
+    filePath = await saveHtml(ctx, html, title, url);
+    //移动文件到指定文件夹
+    const newFilePath=await moveFile(filePath);
+    ctx.body = {
+      message: "File new markd successfully",
+      path: newFilePath,
+    };
   }
-
-  ctx.body = {
-    message: "File marked successfully",
-    path: filePath,
-  };
 });
 
 // add router middleware:
 koaApp.use(router.routes());
 
 var server;
+
+async function moveFile(filePath: any) {
+  const folderPath = MainPlugin.getSettings().bookmarkFolder;
+  await MainPlugin.getDataAdapter().mkdir(folderPath);
+  const fileName = Url2MdUtil.extractFileName(filePath);
+  const newFilePath = folderPath + "/" + fileName + ".md";
+  await MainPlugin.getDataAdapter().rename(filePath, newFilePath);
+  console.log(`文件已移动到 ${newFilePath}`);
+  return newFilePath;
+}
 
 async function saveHtml(ctx: any, html: any, title: any, url: any) {
   const article = Url2MdUtil.cleanHtml(html);
@@ -172,7 +182,7 @@ async function saveHtml(ctx: any, html: any, title: any, url: any) {
     markdown
   );
   const realTitle = Url2MdUtil.getArticleTitle(url, article.title, title);
-  const folderPath = MainPlugin.getSettings().genFolder + "/history";
+  const folderPath = MainPlugin.getSettings().historyFolder;
   const filePath = Url2MdUtil.getSavePath(realTitle, folderPath);
   await MainPlugin.getDataAdapter().mkdir(folderPath);
   await MainPlugin.getDataAdapter().write(filePath, markdownWithMetadata);
@@ -186,6 +196,8 @@ async function saveHtml(ctx: any, html: any, title: any, url: any) {
   return filePath;
 }
 
+var taskCache ;
+
 // 启动服务器
 export function startServer() {
   console.log("启动 Koa Server");
@@ -194,7 +206,7 @@ export function startServer() {
     console.log(`Koa Server is running on http://localhost:${port}`);
   });
   taskCache = new KeyValueHelper(
-    `data/task-cache.json`,
+    `.obsidian/plugins/MarkSearch/task-cache.json`,
     MainPlugin.getDataAdapter()
   );
   taskCache.loadDataFromFile().then();

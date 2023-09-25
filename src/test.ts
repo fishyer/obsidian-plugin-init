@@ -20,7 +20,7 @@ export async function testUrl2md() {
   const i = 550;
   const j = i + 50;
   const links = MdLinkUtil.str2links(fileContent).slice(i, j);
-  const outputDir = MainPlugin.getSettings().genFolder + "/" + srcName;
+  const outputDir = MainPlugin.getSettings().historyFolder + "/" + srcName;
   MainPlugin.getDataAdapter().mkdir(outputDir);
   const taskCache = new KeyValueHelper(
     `data/task-cache.json`,

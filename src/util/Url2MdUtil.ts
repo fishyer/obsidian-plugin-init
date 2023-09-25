@@ -12,6 +12,9 @@ import * as MainPlugin from "../main";
 import axios from "axios";
 import path from "path";
 import md5 from "md5";
+const { v4: uuidv4 } = require('uuid');
+const uuid = uuidv4();
+console.log("uuid: " + uuid);
 
 // import deasync from "deasync";
 
@@ -113,8 +116,8 @@ export function initTurndownService() {
         const imagePath = `${imageFolder}/${newFileName}`;
         console.log(`downloadImage url: ${url} imagePath: ${imagePath}`);
         downloadImage(src, imagePath);
-        // localSrc是相对于md文件的相对路径
-        const mdPath = MainPlugin.getSettings().genFolder + "/test.md";
+        // localSrc是相对于md文件的相对路径,这里的mdPath是一个虚拟的路径，只是为了获取相对路径
+        const mdPath = MainPlugin.getSettings().historyFolder + "/testXXX.md";
         const relativePath = path.relative(mdPath, imagePath);
         console.log(`relativePath: ${relativePath}`);
         // 根据mdPath和relativePath，获取绝对路径
@@ -138,7 +141,9 @@ function generateNewFileName(imageFileName) {
   let newFileName = `${imageFileName}_${timestamp}`;
 
   //对newFileName进行md5编码
-  newFileName = normalizePath(md5(newFileName));
+  // newFileName = normalizePath(md5(newFileName));
+  //使用uuid
+  newFileName = normalizePath(uuidv4());
 
   // 添加文件扩展名
   newFileName += fileExtension;
@@ -158,6 +163,18 @@ function downloadImage(url, filePath) {
 }
 
 async function asyncDownloadImage(url, filePath) {
+  if(url.startsWith("data:image")){
+    console.log(`base64图片，不下载: ${url} ${filePath}`);
+    return;
+  }
+  if(url.startsWith("http://localhost:10086")){
+    console.log(`本地图片，不下载: ${url} ${filePath}`);
+    return;
+  }
+  if(!url.startsWith("http")){
+    console.log(`不是http或https开头的图片，不下载: ${url} ${filePath}`);
+    return;
+  }
   const isFileExists = await MainPlugin.getDataAdapter().exists(filePath);
   if (isFileExists) {
     console.log(`文件已存在，不再重复下载: ${url} ${filePath}`);
@@ -190,7 +207,8 @@ export function addMetadata(
   const titleLine = `title: ${title}`;
   const urlLine = `url: ${url}`;
   const ctimeLine = `clipTime: ${clipTime}`;
-  const metadata = ["---", titleLine, urlLine, ctimeLine, "---"].join("\n");
+  const uuidLine = `uuid: ${uuidv4()}`;
+  const metadata = ["---", titleLine, urlLine, ctimeLine, uuidLine,"---"].join("\n");
   const markdownWithMetadata = metadata + "\n\n" + markdown;
   return markdownWithMetadata;
 }

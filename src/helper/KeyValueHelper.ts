@@ -20,19 +20,18 @@ export default class KeyValueHelper {
   public async loadDataFromFile(){
     const isExists=await this.dataAdapter.exists(this.filePath);
     if (!isExists) {
-      console.log("读取的文件不存在", this.filePath);
-      return;
+      console.log("file note exist，create new file", this.filePath);
+      this.dataAdapter.write(this.filePath, JSON.stringify({})).then();
     }
     const fileContent=await this.dataAdapter.read(this.filePath);
     this.data = JSON.parse(fileContent);
-    console.log("读取文件成功", this.filePath);
+    console.log("read file success", this.filePath);
   }
 
   public saveDataToFile(): void {
     this.dataAdapter.exists(this.filePath).then((isExists) => {
       if (!isExists) {
-        console.log("保存的文件不存在", this.filePath);
-        return;
+        console.log("save file not exist", this.filePath);
       }
       const dataToSave = JSON.stringify(this.data, null, 2);
       this.dataAdapter.write(this.filePath, dataToSave).then();
