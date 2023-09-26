@@ -6,7 +6,8 @@
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "moduleResolution": "node",
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true
   },
   "include": ["src/**/*.ts", "types.d.ts"]
 }

@@ -199,7 +199,7 @@ export default class MarkSearchPlugin extends Plugin {
   }
 }
 
-async function checkFolder(folderPath:string){
+export async function checkFolder(folderPath:string){
   const dataAdapter=getDataAdapter();
   const isExists=await dataAdapter.exists(folderPath);
   if(!isExists){

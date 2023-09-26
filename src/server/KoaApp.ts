@@ -112,35 +112,62 @@ router.get("/resource", async (ctx, next) => {
 });
 
 router.post("/save", async (ctx, next) => {
-  const { title, url, html } = ctx.request.body;
-  console.log(`/save title: ${title} url: ${url} html: ${html.length}`);
-  var filePath = taskCache.getValueByKey(url);
-  console.log(`读取缓存 url: ${url} -> filePath: ${filePath}`);
-  if (filePath) {
-    console.log(`文件已存在 ${filePath} 标题: ${title}`);
+  const { title, url, html, checkCache } = ctx.request.body;
+  console.log(`/save title: ${title} url: ${url} html: ${html.length} checkCache: ${checkCache}`);
+  if (checkCache === false) {
+    console.log(`不需要检查缓存 标题: ${title}`);
+    MainPlugin.getDataAdapter().write("debug/forceSave-1-origin.html", html);
+    filePath = await saveHtml(ctx, html, title, url,true);
     ctx.body = {
-      message: "File has saved successfully",
+      message: "File new saved successfully",
       path: filePath,
     };
-  } else {
+    return;
+  }
+  var filePath = taskCache.getValueByKey(url);
+  if (filePath === null || filePath == undefined) {
     console.log(`文件不存在 标题: ${title}`);
     filePath = await saveHtml(ctx, html, title, url);
     ctx.body = {
       message: "File new saved successfully",
       path: filePath,
     };
+    return;
   }
+  console.log(`读取缓存 url: ${url} -> filePath: ${filePath}`);
+  console.log(`文件已存在 ${filePath} 标题: ${title}`);
+  ctx.body = {
+    message: "File has saved successfully",
+    path: filePath,
+  };
+});
+
+router.post("/saveTest", async (ctx, next) => {
+  const { title, url } = ctx.request.body;
+  console.log(`/save title: ${title} url: ${url}`);
+  var filePath = taskCache.getValueByKey(url);
+  console.log(`read cache url: ${url} -> filePath: ${filePath}`);
+  const html = await Url2MdUtil.url2html(url);
+  MainPlugin.getDataAdapter().write("saveTest.html", html);
+  filePath = await saveHtml(ctx, html, title, url);
+  console.log(`new filePath： ${filePath}`);
+  ctx.body = {
+    message: "test File new saved successfully",
+    path: filePath,
+  };
 });
 
 router.post("/mark", async (ctx, next) => {
-  const { title, url, html ,bookmarkId} = ctx.request.body;
-  console.log(`/mark title: ${title} url: ${url} html: ${html.length} bookmarkId:${bookmarkId}`);
+  const { title, url, html, bookmarkId } = ctx.request.body;
+  console.log(
+    `/mark title: ${title} url: ${url} html: ${html.length} bookmarkId:${bookmarkId}`
+  );
   var filePath = taskCache.getValueByKey(url);
   console.log(`读取缓存 url: ${url} -> filePath: ${filePath}`);
   if (filePath) {
     console.log(`文件已存在 ${filePath} 标题: ${title}`);
     //移动文件到指定文件夹
-    const newFilePath=await moveFile(filePath);
+    const newFilePath = await moveFile(filePath);
     ctx.body = {
       message: "File has markd successfully",
       path: newFilePath,
@@ -149,7 +176,7 @@ router.post("/mark", async (ctx, next) => {
     console.log(`文件不存在 标题: ${title}`);
     filePath = await saveHtml(ctx, html, title, url);
     //移动文件到指定文件夹
-    const newFilePath=await moveFile(filePath);
+    const newFilePath = await moveFile(filePath);
     ctx.body = {
       message: "File new markd successfully",
       path: newFilePath,
@@ -172,9 +199,18 @@ async function moveFile(filePath: any) {
   return newFilePath;
 }
 
-async function saveHtml(ctx: any, html: any, title: any, url: any) {
+async function saveHtml(ctx: any, html: any, title: any, url: any,debug:boolean=false) {
   const article = Url2MdUtil.cleanHtml(html);
+  if(debug){
+    MainPlugin.getDataAdapter().write("debug/forceSave-2-article.html", article.content);
+  }
+  if (article === null || article === undefined) {
+    throw Error(`article未解析成功: ${title} ${url}`);
+  }
   const markdown = Url2MdUtil.html2md(article.content);
+  if(debug){
+    MainPlugin.getDataAdapter().write("debug/forceSave-3-markdown.md", markdown);
+  }
   const markdownWithMetadata = Url2MdUtil.addMetadata(
     title,
     url,
@@ -196,7 +232,7 @@ async function saveHtml(ctx: any, html: any, title: any, url: any) {
   return filePath;
 }
 
-var taskCache ;
+var taskCache;
 
 // 启动服务器
 export function startServer() {
@@ -206,7 +242,7 @@ export function startServer() {
     console.log(`Koa Server is running on http://localhost:${port}`);
   });
   taskCache = new KeyValueHelper(
-    `.obsidian/plugins/MarkSearch/task-cache.json`,
+    `.obsidian/plugins/MarkSearch-Obsidian/task-cache.json`,
     MainPlugin.getDataAdapter()
   );
   taskCache.loadDataFromFile().then();

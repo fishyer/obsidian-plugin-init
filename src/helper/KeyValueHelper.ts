@@ -1,6 +1,8 @@
 import * as LogUtil from "../util/LogUtil";
 const { info, warn, error, debug } = LogUtil;
 import { DataAdapter } from "obsidian";
+import path from "path";
+import { checkFolder } from "../main";
 
 interface KeyValue {
   [key: string]: any;
@@ -18,6 +20,8 @@ export default class KeyValueHelper {
   }
 
   public async loadDataFromFile(){
+    const folder = path.dirname(this.filePath);
+    checkFolder(folder);
     const isExists=await this.dataAdapter.exists(this.filePath);
     if (!isExists) {
       console.log("file note exist，create new file", this.filePath);

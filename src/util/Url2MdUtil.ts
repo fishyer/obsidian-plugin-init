@@ -12,7 +12,7 @@ import * as MainPlugin from "../main";
 import axios from "axios";
 import path from "path";
 import md5 from "md5";
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require("uuid");
 const uuid = uuidv4();
 console.log("uuid: " + uuid);
 
@@ -44,8 +44,12 @@ export function initTurndownService() {
       return node.nodeName === "A" && node.hasAttribute("href");
     },
     replacement: (content, node) => {
-      const href = node.getAttribute("href");
       const title = node.title ? ` "${node.title}"` : "";
+      const href = node.getAttribute("href");
+      if (/^app:\/\//.test(href)) {
+        console.log("这是一个app协议链接，直接忽略: "+href+" "+title)
+        return "";
+      }
       return `[${content}](${href}${title})`;
     },
   });
@@ -163,15 +167,15 @@ function downloadImage(url, filePath) {
 }
 
 async function asyncDownloadImage(url, filePath) {
-  if(url.startsWith("data:image")){
+  if (url.startsWith("data:image")) {
     console.log(`base64图片，不下载: ${url} ${filePath}`);
     return;
   }
-  if(url.startsWith("http://localhost:10086")){
+  if (url.startsWith("http://localhost:10086")) {
     console.log(`本地图片，不下载: ${url} ${filePath}`);
     return;
   }
-  if(!url.startsWith("http")){
+  if (!url.startsWith("http")) {
     console.log(`不是http或https开头的图片，不下载: ${url} ${filePath}`);
     return;
   }
@@ -208,7 +212,9 @@ export function addMetadata(
   const urlLine = `url: ${url}`;
   const ctimeLine = `clipTime: ${clipTime}`;
   const uuidLine = `uuid: ${uuidv4()}`;
-  const metadata = ["---", titleLine, urlLine, ctimeLine, uuidLine,"---"].join("\n");
+  const metadata = ["---", titleLine, urlLine, ctimeLine, uuidLine, "---"].join(
+    "\n"
+  );
   const markdownWithMetadata = metadata + "\n\n" + markdown;
   return markdownWithMetadata;
 }
@@ -284,11 +290,13 @@ export async function url2md(
 }
 
 export async function url2html(url: string) {
+  console.log("url2html start");
   browserContext = await getBrowserContext();
   const page: Page = await browserContext.newPage();
   await page.goto(url);
   const html: string = await page.content();
   page.close();
+  console.log("url2html end");
   return html;
 }
 
