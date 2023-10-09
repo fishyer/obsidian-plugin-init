@@ -116,7 +116,9 @@ router.post("/save", async (ctx, next) => {
   console.log(`/save title: ${title} url: ${url} html: ${html.length} checkCache: ${checkCache}`);
   if (checkCache === false) {
     console.log(`不需要检查缓存 标题: ${title}`);
-    MainPlugin.getDataAdapter().write("debug/forceSave-1-origin.html", html);
+    const debugFolder=MainPlugin.getSettings().debugFolder;
+    await MainPlugin.checkFolder(debugFolder);
+    MainPlugin.getDataAdapter().write(debugFolder+"/forceSave-1-origin.html", html);
     filePath = await saveHtml(ctx, html, title, url,true);
     ctx.body = {
       message: "File new saved successfully",
@@ -202,14 +204,14 @@ async function moveFile(filePath: any) {
 async function saveHtml(ctx: any, html: any, title: any, url: any,debug:boolean=false) {
   const article = Url2MdUtil.cleanHtml(html);
   if(debug){
-    MainPlugin.getDataAdapter().write("debug/forceSave-2-article.html", article.content);
+    MainPlugin.getDataAdapter().write(MainPlugin.getSettings().debugFolder+"/forceSave-2-article.html", article.content);
   }
   if (article === null || article === undefined) {
     throw Error(`article未解析成功: ${title} ${url}`);
   }
   const markdown = Url2MdUtil.html2md(article.content);
   if(debug){
-    MainPlugin.getDataAdapter().write("debug/forceSave-3-markdown.md", markdown);
+    MainPlugin.getDataAdapter().write(MainPlugin.getSettings().debugFolder+"/forceSave-3-markdown.md", markdown);
   }
   const markdownWithMetadata = Url2MdUtil.addMetadata(
     title,
@@ -218,8 +220,11 @@ async function saveHtml(ctx: any, html: any, title: any, url: any,debug:boolean=
     markdown
   );
   const realTitle = Url2MdUtil.getArticleTitle(url, article.title, title);
+  console.log(`realTitle: ${realTitle}`);
   const folderPath = MainPlugin.getSettings().historyFolder;
+  console.log(`folderPath: ${folderPath}`);
   const filePath = Url2MdUtil.getSavePath(realTitle, folderPath);
+  console.log(`filePath: ${filePath}`);
   await MainPlugin.getDataAdapter().mkdir(folderPath);
   await MainPlugin.getDataAdapter().write(filePath, markdownWithMetadata);
   console.log(`文件成功下载 ${filePath} 标题: ${title}`);

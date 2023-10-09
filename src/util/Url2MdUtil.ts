@@ -47,7 +47,7 @@ export function initTurndownService() {
       const title = node.title ? ` "${node.title}"` : "";
       const href = node.getAttribute("href");
       if (/^app:\/\//.test(href)) {
-        console.log("这是一个app协议链接，直接忽略: "+href+" "+title)
+        console.log("这是一个app协议链接，直接忽略: " + href + " " + title);
         return "";
       }
       return `[${content}](${href}${title})`;
@@ -223,14 +223,20 @@ export function addMetadata(
 // 示例： MyLogseq/topic/note-course/技术书籍-学习笔记/深入理解Android自动化测试.md --> 深入理解Android自动化测试
 export function extractFileName(filename) {
   var fileNameWithoutExtension = filename
+    .replace(" ", "")
     .replace(/^.*[\\/]/, "")
     .replace(/\.[^.]+$/, "");
   return fileNameWithoutExtension;
 }
 
+// const extractTitle = extractFileName(title);
+// console.log(`extractTitle: ${extractTitle}`);
 export function getSavePath(title: string, outputDir: string) {
-  const fileName = normalizePath(extractFileName(title)) + ".md";
+  console.log(`getSavePath: ${title} ${outputDir}`);
+  const fileName = normalizePath(title) + ".md";
+  console.log(`fileName: ${fileName}`);
   const savePath = outputDir + "/" + fileName;
+  console.log(`savePath: ${savePath}`);
   return savePath;
 }
 
@@ -255,6 +261,9 @@ export function getArticleTitle(
     : htmlTitle;
   //对知乎文章进行特殊处理，将标题中的(10 封私信 / 42 条消息)替换为空
   realTitle = realTitle.replace(/\(.*?\)/g, "");
+  console.log(
+    `realTitle: ${realTitle} articleTitle: ${articleTitle} htmlTitle: ${htmlTitle} url: ${url}`
+  );
   return realTitle;
 }
 

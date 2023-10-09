@@ -28,6 +28,7 @@ interface MarkSearchSettings {
   bookmarkFolder: string;
   //是否需要下载网络图片到本地，为none时不下载，其它时下载到本地
   imageFolder: string;
+  debugFolder: string;
 }
 
 const DEFAULT_SETTINGS = {
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS = {
   historyFolder: "history",
   bookmarkFolder: "bookmark",
   imageFolder: "none",
+  debugFolder: ".obsidian/plugins/MarkSearch-Obsidian/debug",
 };
 
 var curPlugin: MarkSearchPlugin;

@@ -1,6 +1,6 @@
 {
-  "name": "obsidian-plugin-marksearch",
-  "version": "1.0.0",
+  "name": "marksearch",
+  "version": "1.2.0",
   "description": "随时随地收藏，打造你的本地搜索引擎",
   "main": "lib/main.js",
   "license": "MIT",
